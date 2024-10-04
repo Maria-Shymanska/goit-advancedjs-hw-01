@@ -1,58 +1,59 @@
-// Оголошення об'єкта formData з порожніми значеннями
-let formData = {
+const FORM_FEEDBACK_KEY = 'feedback-form-state';
+
+const formData = {
   email: '',
   message: '',
 };
 
-const form = document.querySelector('.feedback-form');
-
-// Перевірка локального сховища при завантаженні сторінки
-window.addEventListener('load', () => {
-  const savedData = localStorage.getItem('feedback-form-state');
-  if (savedData) {
-    try {
-      formData = JSON.parse(savedData); 
-      form.elements.email.value = formData.email || '';
-      form.elements.message.value = formData.message || '';
-    } catch (error) {
-      console.error('Error parsing saved data:', error);
-    }
-  }
-});
-
-// Функція збереження formData у локальне сховище
-const saveLocalStorage = () => {
-  localStorage.setItem('feedback-form-state', JSON.stringify(formData));
+const resetFormData = data => {
+  Object.keys(data).forEach(key => {
+    data[key] = '';
+  });
 };
 
-// Делегування події 'input' для відстеження змін у полях форми
-form.addEventListener('input', e => {
-  formData[e.target.name] = e.target.value; 
-  saveLocalStorage(); 
-});
+const getFormData = () => {
+  const data = JSON.parse(localStorage.getItem(FORM_FEEDBACK_KEY));
+  if (!data) return formData;
 
-// Обробка події 'submit'
-form.addEventListener('submit', e => {
-  e.preventDefault();
+  Object.keys(data).forEach(key => {
+    formData[key] = data[key];
+  });
 
-  // Валідація електронної пошти та повідомлення
-  if (!validator.isEmail(formData.email)) {
-    alert('Please enter a valid email address');
-    return;
-  }
+  return formData;
+};
 
-  if (validator.isEmpty(formData.message)) {
-    alert('Please enter a message');
-    return;
-  }
+const isFormDataIsValid = () => {
+  const data = getFormData();
+  return Object.values(data).every(value => value);
+};
 
+const updateFormData = feedbackForm => {
+  const data = getFormData();
+  Object.keys(data).forEach(key => {
+    feedbackForm[key].value = data[key];
+  });
+};
 
-  console.log(formData);
+document.addEventListener('DOMContentLoaded', () => {
+  const feedbackForm = document.querySelector('.feedback-form');
 
-  // Очищення локального сховища та formData після відправлення форми
-  localStorage.removeItem('feedback-form-state');
-  formData = { email: '', message: '' };
+  feedbackForm.addEventListener('input', event => {
+    formData[event.target.name] = event.target.value.trim();
+    localStorage.setItem(FORM_FEEDBACK_KEY, JSON.stringify(formData));
+  });
 
-  // Скидання форми
-  form.reset();
+  updateFormData(feedbackForm);
+
+  feedbackForm.addEventListener('submit', event => {
+    event.preventDefault();
+
+    if (isFormDataIsValid()) {
+      console.log(formData);
+      localStorage.removeItem(FORM_FEEDBACK_KEY);
+      feedbackForm.reset();
+      resetFormData(formData);
+    } else {
+      alert('Fill please all fields');
+    }
+  });
 });
